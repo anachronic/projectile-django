@@ -27,6 +27,8 @@ Switch to a full route if you want to get it out of an environment.")
 (defvar projectile-django-server-mode-map
   (let ((map (copy-keymap comint-mode-map)))
     (define-key map (kbd "C-c C-q") 'bury-buffer)
+    (define-key map (kbd "C-c C-r") 'projectile-django-restart-server)
+    (define-key map (kbd "C-c C-k") 'projectile-django-terminate-server)
     map)
   "Mode map for `projectile-django-server-mode'.")
 
@@ -36,8 +38,8 @@ Switch to a full route if you want to get it out of an environment.")
 Killing the buffer will terminate its server process.
 
 \\{projectile-django-server-mode-map}"
-  (add-hook 'kill-buffer-hook 'projectile-django--kill-server t t)
-  (add-hook 'kill-emacs-hook 'projectile-django--kill-server t t))
+  (add-hook 'kill-buffer-hook 'projectile-django--kill-server nil t)
+  (add-hook 'kill-emacs-hook 'projectile-django--kill-server nil t))
 
 (defun projectile-django--locate-manage ()
   "Return the full path of manage.py in the project."
@@ -65,22 +67,41 @@ Killing the buffer will terminate its server process.
 (defun projectile-django-server ()
   "Run the django server if it's not running, otherwise switch to its buffer."
   (interactive)
-  (let ((server-buffer-name (projectile-django--get-server-buffer-name)))
-    (if (member server-buffer-name (mapcar 'buffer-name (buffer-list)))
-        (switch-to-buffer server-buffer-name)
+  (let* ((server-buffer-name (projectile-django--get-server-buffer-name))
+         (process (get-buffer-process server-buffer-name)))
+    (when (member server-buffer-name (mapcar 'buffer-name (buffer-list)))
+      (switch-to-buffer server-buffer-name))
+    (when (not process)
       (set-buffer (apply 'make-comint-in-buffer
                          (concat (projectile-project-name) "-django-server")
                          (projectile-django--get-server-buffer-name)
                          projectile-django-python-interpreter
                          nil
                          (split-string-and-unquote (projectile-django--assemble-server-command))))
-      (projectile-django-server-mode)
-      (switch-to-buffer (current-buffer)))))
+      (erase-buffer)
+      (switch-to-buffer (current-buffer))
+      (projectile-django-server-mode))))
 
 (defun projectile-django--kill-server ()
   "Kill the current django server."
-  (let ((process (get-buffer-process projectile-django-server-buffer-name)))
+  (let ((process (get-buffer-process (projectile-django--get-server-buffer-name))))
     (when process (signal-process process 15))))
+
+(defun projectile-django-terminate-server ()
+  "Terminate the django server process and kill its buffer."
+  (interactive)
+  (let ((server-buffer (get-buffer (projectile-django--get-server-buffer-name))))
+    (projectile-django--kill-server)
+    (kill-buffer server-buffer)))
+
+(defun projectile-django-restart-server ()
+  "Restart the django server."
+  (interactive)
+  (projectile-django--kill-server)
+  (let ((server-buffer (get-buffer (projectile-django--get-server-buffer-name))))
+    (set-buffer server-buffer)
+    (projectile-django-server)))
+
 
 (provide 'projectile-django)
 ;;; projectile-django.el ends here
