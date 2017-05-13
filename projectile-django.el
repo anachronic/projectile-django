@@ -76,12 +76,13 @@ Killing the buffer will terminate its server process.
     (when (member server-buffer-name (mapcar 'buffer-name (buffer-list)))
       (switch-to-buffer server-buffer-name))
     (when (not process)
-      (let ((server-buffer (apply 'make-comint-in-buffer
-                                  (concat (projectile-project-name) "-django-server")
-                                  (projectile-django--get-server-buffer-name)
-                                  projectile-django-python-interpreter
-                                  nil
-                                  (split-string-and-unquote (projectile-django--assemble-server-command)))))
+      (let ((server-buffer
+             (apply 'make-comint-in-buffer
+                    (concat (projectile-project-name) "-django-server")
+                    (projectile-django--get-server-buffer-name)
+                    projectile-django-python-interpreter
+                    nil
+                    (split-string-and-unquote (projectile-django--assemble-server-command)))))
         (projectile-django--set-up-server-buffer server-buffer)))))
 
 (defun projectile-django--kill-server ()
