@@ -187,6 +187,13 @@ Quitting the buffer will trigger `projectile-django-quit-action'.
           (switch-to-buffer migration-buffer)
           (projectile-django-migration-mode))))))
 
+;; Keymap
+(defvar projectile-django-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "s") 'projectile-django-server)
+    (define-key map (kbd "m") 'projectile-django-migrate-all)
+    map))
+
 
 (provide 'projectile-django)
 ;;; projectile-django.el ends here
