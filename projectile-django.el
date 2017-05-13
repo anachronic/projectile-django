@@ -16,11 +16,35 @@
 
 Switch to a full route if you want to get it out of an environment.")
 
+(defvar projectile-django-default-quit-action 'bury
+  "Action to take on quitting projectile-django buffers.
+
+Default is 'bury, which means bury the buffer, you can also set
+it to 'kill, which would mean kill the buffer instead.
+
+Any other symbol will default to 'bury.")
+
 
 ;; Require our libraries
 (require 'comint)
 (require 'projectile)
 
+;; General purpose defs
+(defun projectile-django--locate-manage ()
+  "Return the full path of manage.py in the project."
+  (expand-file-name (concat (projectile-project-root)
+                            "manage.py")))
+
+(defun projectile-django-quit-action ()
+  "Quit the current buffer.
+
+The action taken is defined in `projectile-django-default-quit-action'."
+  (interactive)
+  (if (eq 'quit projectile-django-default-quit-action)
+      (kill-this-buffer)
+    (bury-buffer)))
+
+;; Server specific defs
 (defvar projectile-django-server-mode-map
   (let ((map (copy-keymap comint-mode-map)))
     (define-key map (kbd "C-c C-q") 'bury-buffer)
@@ -37,11 +61,6 @@ Killing the buffer will terminate its server process.
 \\{projectile-django-server-mode-map}"
   (add-hook 'kill-buffer-hook 'projectile-django--kill-server nil t)
   (add-hook 'kill-emacs-hook 'projectile-django--kill-server nil t))
-
-(defun projectile-django--locate-manage ()
-  "Return the full path of manage.py in the project."
-  (expand-file-name (concat (projectile-project-root)
-                            "manage.py")))
 
 (defun projectile-django--get-bind-string ()
   "Get bind string for the server."
@@ -63,10 +82,11 @@ Killing the buffer will terminate its server process.
 
 (defun projectile-django--set-up-server-buffer (buffer)
   "Set up the BUFFER for the django server."
-  (set-buffer buffer)
-  (erase-buffer)
-  (switch-to-buffer (current-buffer))
-  (projectile-django-server-mode))
+  (save-current-buffer
+    (set-buffer buffer)
+    (erase-buffer)
+    (switch-to-buffer (current-buffer))
+    (projectile-django-server-mode)))
 
 (defun projectile-django-server ()
   "Run the django server if it's not running, otherwise switch to its buffer."
@@ -104,8 +124,68 @@ Killing the buffer will terminate its server process.
   (interactive)
   (projectile-django--kill-server)
   (let ((server-buffer (get-buffer (projectile-django--get-server-buffer-name))))
-    (set-buffer server-buffer)
-    (projectile-django-server)))
+    (save-current-buffer
+      (set-buffer server-buffer)
+      (projectile-django-server))))
+
+
+;; Migration defs
+(defvar projectile-django-migration-mode-map
+  (let ((map (copy-keymap comint-mode-map)))
+    (suppress-keymap map)
+    (define-key map (kbd "q") 'projectile-django-quit-action)
+    map)
+  "Mode map for `projectile-django-migration-mode'.")
+
+(define-derived-mode projectile-django-migration-mode comint-mode "django-migrate"
+  "Major mode for django migrations used by `projectile-django'.
+
+Quitting the buffer will trigger `projectile-django-quit-action'.
+
+\\{projectile-django-migration-mode-map}"
+  (setq buffer-read-only t))
+
+(defun projectile-django--assemble-migrate-all-command ()
+  "Return a string with the migrate command."
+  (format "%s %s"
+          (projectile-django--locate-manage)
+          "migrate"))
+
+(defun projectile-django--get-migrate-buffer-name ()
+  "Return a suitable buffer name for the migration buffer."
+  (concat "*" (projectile-project-name) "-migrations*"))
+
+(defun projectile-django--set-up-migration-buffer (buffer)
+  "Set up the migration buffer BUFFER for django."
+  (save-current-buffer
+    (set-buffer buffer)
+    (let ((process (get-buffer-process buffer)))
+      (when process
+        (delete-process process)))
+    (setq buffer-read-only nil)
+    (erase-buffer)
+    (setq buffer-read-only t)))
+
+(defun projectile-django-migrate-all ()
+  "Migrate all apps in project."
+  (interactive)
+  (let* ((migration-buffer (projectile-django--get-migrate-buffer-name))
+         (process (get-buffer-process migration-buffer)))
+    (when (member migration-buffer (mapcar 'buffer-name (buffer-list)))
+      (projectile-django--set-up-migration-buffer migration-buffer)
+      (switch-to-buffer migration-buffer))
+    (when (not process)
+      (let ((migration-buffer
+             (apply 'make-comint-in-buffer
+                    (concat (projectile-project-name) "-migrations")
+                    (projectile-django--get-migrate-buffer-name)
+                    projectile-django-python-interpreter
+                    nil
+                    (split-string-and-unquote (projectile-django--assemble-migrate-all-command)))))
+        (save-current-buffer
+          (set-buffer migration-buffer)
+          (switch-to-buffer migration-buffer)
+          (projectile-django-migration-mode))))))
 
 
 (provide 'projectile-django)
