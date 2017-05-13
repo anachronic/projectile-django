@@ -2,9 +2,6 @@
 ;;; Commentary:
 ;;; Code:
 
-(defvar projectile-django-server-buffer-name "*projectile-django-server*"
-  "Name of the server buffer for projectile-django.")
-
 (defvar projectile-django-serve-for-everyone nil
   "Set to t if you want to bind the server to 0.0.0.0.")
 
@@ -64,6 +61,13 @@ Killing the buffer will terminate its server process.
   "Return a suitable buffer name for the django server."
   (concat "*" (projectile-project-name) "-django-server*"))
 
+(defun projectile-django--set-up-server-buffer (buffer)
+  "Set up the BUFFER for the django server."
+  (set-buffer buffer)
+  (erase-buffer)
+  (switch-to-buffer (current-buffer))
+  (projectile-django-server-mode))
+
 (defun projectile-django-server ()
   "Run the django server if it's not running, otherwise switch to its buffer."
   (interactive)
@@ -72,15 +76,13 @@ Killing the buffer will terminate its server process.
     (when (member server-buffer-name (mapcar 'buffer-name (buffer-list)))
       (switch-to-buffer server-buffer-name))
     (when (not process)
-      (set-buffer (apply 'make-comint-in-buffer
-                         (concat (projectile-project-name) "-django-server")
-                         (projectile-django--get-server-buffer-name)
-                         projectile-django-python-interpreter
-                         nil
-                         (split-string-and-unquote (projectile-django--assemble-server-command))))
-      (erase-buffer)
-      (switch-to-buffer (current-buffer))
-      (projectile-django-server-mode))))
+      (let ((server-buffer (apply 'make-comint-in-buffer
+                                  (concat (projectile-project-name) "-django-server")
+                                  (projectile-django--get-server-buffer-name)
+                                  projectile-django-python-interpreter
+                                  nil
+                                  (split-string-and-unquote (projectile-django--assemble-server-command)))))
+        (projectile-django--set-up-server-buffer server-buffer)))))
 
 (defun projectile-django--kill-server ()
   "Kill the current django server."
