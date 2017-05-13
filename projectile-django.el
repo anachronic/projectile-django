@@ -19,13 +19,23 @@
 
 Switch to a full route if you want to get it out of an environment.")
 
-(define-derived-mode projectile-django-server-mode comint-mode "django-server"
-  "Compilation mode for running django server used by `projectile-django'.
 
-Killing the buffer will terminate its server process."
-  ;; (when projectile-django-server-mode-ansi-colors
-  ;; (add-hook 'compilation-filter-hook 'projectile-django-apply-ansi-color nil t))
-  (setq-local compilation-scroll-output t)
+;; Require our libraries
+(require 'comint)
+(require 'projectile)
+
+(defvar projectile-django-server-mode-map
+  (let ((map (copy-keymap comint-mode-map)))
+    (define-key map (kbd "C-c C-q") 'bury-buffer)
+    map)
+  "Mode map for `projectile-django-server-mode'.")
+
+(define-derived-mode projectile-django-server-mode comint-mode "django-server"
+  "Major mode for interacting with a django server used by `projectile-django'.
+
+Killing the buffer will terminate its server process.
+
+\\{projectile-django-server-mode-map}"
   (add-hook 'kill-buffer-hook 'projectile-django--kill-server t t)
   (add-hook 'kill-emacs-hook 'projectile-django--kill-server t t))
 
@@ -64,6 +74,7 @@ Killing the buffer will terminate its server process."
                          projectile-django-python-interpreter
                          nil
                          (split-string-and-unquote (projectile-django--assemble-server-command))))
+      (projectile-django-server-mode)
       (switch-to-buffer (current-buffer)))))
 
 (defun projectile-django--kill-server ()
