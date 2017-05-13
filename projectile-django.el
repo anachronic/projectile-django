@@ -84,10 +84,10 @@ Killing the buffer will terminate its server process.
 
 (defun projectile-django--kill-server ()
   "Kill the current django server."
-  (let ((server-buffer (get-buffer (projectile-django--get-server-buffer-name))))
-    (let ((process (get-buffer-process server-buffer)))
-      (when process
-        (delete-process process)))))
+  (let* ((server-buffer (get-buffer (projectile-django--get-server-buffer-name)))
+         (process (get-buffer-process server-buffer)))
+    (when process
+      (delete-process process))))
 
 (defun projectile-django-terminate-server ()
   "Terminate the django server process and kill its buffer."
