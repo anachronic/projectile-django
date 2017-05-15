@@ -24,12 +24,32 @@ it to 'kill, which would mean kill the buffer instead.
 
 Any other symbol will default to 'bury.")
 
+(defvar projectile-django-loaddata-command
+  "loaddata"
+  "Command to load a fixture (e.g. json files) into the database.")
+
 
 ;; Require our libraries
 (require 'comint)
 (require 'projectile)
+(require 'cl)
 
 ;; General purpose defs
+(defvar projectile-django-output-mode-map
+  (let ((map (make-sparse-keymap)))
+    (suppress-keymap map)
+    (define-key map (kbd "q") 'projectile-django-quit-action)
+    map)
+  "Mode map for `projectile-django-output-mode'.")
+
+(define-derived-mode projectile-django-output-mode fundamental-mode "django-output"
+  "Major mode for displaying django output.
+
+Quitting the buffer will trigger `projectile-django-quit-action'.
+
+\\{projectile-django-output-mode-map}")
+
+
 (defun projectile-django--locate-manage ()
   "Return the full path of manage.py in the project."
   (expand-file-name (concat (projectile-project-root)
@@ -186,6 +206,57 @@ Quitting the buffer will trigger `projectile-django-quit-action'.
           (set-buffer migration-buffer)
           (switch-to-buffer migration-buffer)
           (projectile-django-migration-mode))))))
+
+;; Loading fixtures.
+(defun projectile-django--get-fixtures-directories ()
+  "Get all fixture directories in project."
+  (let ((fixdirs '()))
+    (progn
+      (dolist (dir (f-directories (projectile-project-root)))
+        (when (member (f-join dir "fixtures")
+                      (f-directories dir))
+          (push (f-join dir "fixtures") fixdirs)))
+      fixdirs)))
+
+(defun projectile-django--get-fixture-files ()
+  "Get the full path for every fixture file in the project."
+  (let ((fixture-dirs (projectile-django--get-fixtures-directories))
+        (fixture-files '()))
+    (dolist (dir fixture-dirs)
+      (dolist (file (f-files dir))
+        (unless (string-match-p "__init__.py" file)
+          (push file fixture-files))))
+    fixture-files))
+
+(defun projectile-django--get-fixtures-relative-path ()
+  "Get only the relative paths for every fixture file in the project."
+  (mapcar (lambda (file)
+            (substring file (length (projectile-project-root))))
+          (projectile-django--get-fixture-files)))
+
+(defun projectile-django--get-fixtures-filenames ()
+  "Get only file names for every fixture in project."
+  (mapcar 'f-filename (projectile-django--get-fixture-files)))
+
+(defun projectile-django-loaddata ()
+  "Prompt for all fixtures in project and load the selected one."
+  (interactive)
+  (let* ((choices (projectile-django--get-fixtures-relative-path))
+         (choice (f-filename (projectile-completing-read "Fixture to load: " choices)))
+         (command (concat projectile-django-loaddata-command " " choice))
+         (output-buffer (get-buffer-create "*Django output*")))
+    (save-current-buffer
+      (set-buffer output-buffer)
+      (setq buffer-read-only nil)
+      (erase-buffer)
+      (insert (shell-command-to-string (concat "python "
+                                               (projectile-django--locate-manage)
+                                               " "
+                                               command)))
+      (setq buffer-read-only t)
+      (projectile-django-output-mode))
+    (pop-to-buffer output-buffer)))
+
 
 ;; Keymap
 (defvar projectile-django-map
