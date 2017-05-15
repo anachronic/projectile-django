@@ -28,11 +28,15 @@ Any other symbol will default to 'bury.")
   "loaddata"
   "Command to load a fixture (e.g. json files) into the database.")
 
+(defvar projectile-django-test-command
+  "test"
+  "Command to run all tests.")
+
 
 ;; Require our libraries
 (require 'comint)
 (require 'projectile)
-(require 'cl)
+(require 'cl-lib)
 
 ;; General purpose defs
 (defvar projectile-django-output-mode-map
@@ -257,12 +261,71 @@ Quitting the buffer will trigger `projectile-django-quit-action'.
       (projectile-django-output-mode))
     (pop-to-buffer output-buffer)))
 
+;; Tests
+(defvar projectile-django-test-mode-map
+  (let ((map (copy-keymap comint-mode-map)))
+    (suppress-keymap map)
+    (define-key map (kbd "C-c C-q") 'bury-buffer)
+    (define-key map (kbd "C-c C-r") 'projectile-django-restart-tests)
+    (define-key map (kbd "C-c C-k") 'projectile-django-kill-tests)
+    (define-key map (kbd "q") 'projectile-django-quit-action)
+    map)
+  "Mode map for `projectile-django-server-mode'.")
+
+(define-derived-mode projectile-django-test-mode comint-mode "django-tests"
+  "Major mode for running tests in a django project. Used by `projectile-django'.
+
+\\{projectile-django-test-mode-map}")
+
+(defun projectile-django--assemble-test-command ()
+  "Return command string to run every test."
+  (format "%s %s"
+          (projectile-django--locate-manage)
+          projectile-django-test-command))
+
+(defun projectile-django--get-test-buffer-name ()
+  "Return the test buffer name for this project."
+  (concat "*" (projectile-project-name) "-tests*"))
+
+(defun projectile-django--set-up-test-buffer (buffer)
+  "Set up BUFFER to get output from every test."
+  (save-current-buffer
+    (set-buffer (get-buffer buffer))
+    (let ((process (get-buffer-process buffer)))
+      (when process (delete-process process)))
+    (setq buffer-read-only nil)
+    (erase-buffer)
+    (setq buffer-read-only t)))
+
+(defun projectile-django-test-all ()
+  "Run every test on the project."
+  (interactive)
+  (let ((test-buffer (projectile-django--get-test-buffer-name)))
+    (when (member test-buffer (mapcar 'buffer-name (buffer-list)))
+      (projectile-django--set-up-test-buffer test-buffer)
+      (switch-to-buffer test-buffer))
+    (when (not (get-buffer-process test-buffer))
+      (let ((new-test-buffer
+             (apply 'make-comint-in-buffer
+                    (concat (projectile-project-name) "-tests")
+                    (projectile-django--get-test-buffer-name)
+                    projectile-django-python-interpreter
+                    nil
+                    (split-string-and-unquote (projectile-django--assemble-test-command)))))
+        (save-current-buffer
+          (set-buffer new-test-buffer)
+          (projectile-django-test-mode))
+        (switch-to-buffer new-test-buffer)))))
+
+
 
 ;; Keymap
 (define-prefix-command 'projectile-django-map)
 (let ((map projectile-django-map))
   (define-key map (kbd "s") 'projectile-django-server)
   (define-key map (kbd "m") 'projectile-django-migrate-all)
+  (define-key map (kbd "l") 'projectile-django-loaddata)
+  (define-key map (kbd "t") 'projectile-django-test-all)
   map)
 
 
