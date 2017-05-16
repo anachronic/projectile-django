@@ -338,10 +338,6 @@ Quitting the buffer will trigger `projectile-django-quit-action'.
       (projectile-django--terminate-test-process test-buffer))
     (projectile-django-test-all)))
 
-
-
-
-
 ;; Keymap
 (define-prefix-command 'projectile-django-map)
 (let ((map projectile-django-map))
@@ -350,6 +346,22 @@ Quitting the buffer will trigger `projectile-django-quit-action'.
   (define-key map (kbd "l") 'projectile-django-loaddata)
   (define-key map (kbd "t") 'projectile-django-test-all)
   map)
+
+(defvar projectile-django-defined-modes
+  (list projectile-django-output-mode-map
+        projectile-django-migration-mode-map
+        projectile-django-test-mode-map
+        projectile-django-server-mode-map)
+  "All modes defined by `projectile-django'.
+
+Do not change this variable.")
+
+(defun projectile-django-set-keys (key mode-map)
+  "Set KEY as prefix for the `projectile-django-map'.
+
+It sets it in MODE-MAP plus every mode defined by `projectile-django'."
+  (dolist (keymap (cons mode-map projectile-django-defined-modes))
+    (define-key keymap (kbd key) 'projectile-django-map)))
 
 
 (provide 'projectile-django)
