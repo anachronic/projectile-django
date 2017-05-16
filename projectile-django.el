@@ -317,6 +317,29 @@ Quitting the buffer will trigger `projectile-django-quit-action'.
           (projectile-django-test-mode))
         (switch-to-buffer new-test-buffer)))))
 
+(defun projectile-django--terminate-test-process (buffer)
+  "Terminate the test process associated to BUFFER."
+  (when buffer
+    (let ((process (get-buffer-process buffer)))
+      (when process (delete-process process)))))
+
+(defun projectile-django-kill-tests ()
+  "Kill the django test process and buffer."
+  (interactive)
+  (let ((test-buffer (get-buffer (projectile-django--get-test-buffer-name))))
+    (projectile-django--terminate-test-process test-buffer)
+    (kill-buffer test-buffer)))
+
+(defun projectile-django-restart-tests ()
+  "Restart the testing process."
+  (interactive)
+  (let ((test-buffer (get-buffer (projectile-django--get-test-buffer-name))))
+    (when test-buffer
+      (projectile-django--terminate-test-process test-buffer))
+    (projectile-django-test-all)))
+
+
+
 
 
 ;; Keymap
