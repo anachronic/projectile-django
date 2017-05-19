@@ -338,6 +338,22 @@ Quitting the buffer will trigger `projectile-django-quit-action'.
       (projectile-django--terminate-test-process test-buffer))
     (projectile-django-test-all)))
 
+
+;; Visit project page
+(defun projectile-django-visit-page (&optional arg)
+  "Visit the project page, default is http://localhost:8000.
+
+If ARG is present, prompt for an url instead, the port defined
+above actually defaults to the one in
+`projectile-django-default-port'."
+  (interactive "P")
+  (let ((final-url (format "%s%s"
+                           "http://localhost:"
+                           projectile-django-default-port)))
+    (when arg
+      (setq final-url (read-string "URL: " final-url)))
+    (browse-url final-url)))
+
 ;; Keymap
 (define-prefix-command 'projectile-django-map)
 (let ((map projectile-django-map))
@@ -345,23 +361,11 @@ Quitting the buffer will trigger `projectile-django-quit-action'.
   (define-key map (kbd "m") 'projectile-django-migrate-all)
   (define-key map (kbd "l") 'projectile-django-loaddata)
   (define-key map (kbd "t") 'projectile-django-test-all)
+  (define-key map (kbd "v") 'projectile-django-visit-page)
   map)
 
-(defvar projectile-django-defined-modes
-  (list projectile-django-output-mode-map
-        projectile-django-migration-mode-map
-        projectile-django-test-mode-map
-        projectile-django-server-mode-map)
-  "All modes defined by `projectile-django'.
-
-Do not change this variable.")
-
-(defun projectile-django-set-keys (key mode-map)
-  "Set KEY as prefix for the `projectile-django-map'.
-
-It sets it in MODE-MAP plus every mode defined by `projectile-django'."
-  (dolist (keymap (cons mode-map projectile-django-defined-modes))
-    (define-key keymap (kbd key) 'projectile-django-map)))
+;; We expect our users to just bind the previous prefix to a key
+;; globally. It's the best way
 
 
 (provide 'projectile-django)
