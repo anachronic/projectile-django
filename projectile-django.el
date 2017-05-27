@@ -81,16 +81,22 @@ The action taken is defined in `projectile-django-default-quit-action'."
              (s-contains? path project-file-path t))
            (projectile-current-project-files)))
 
-(defun projectile-django--jump-to-file (file)
-  "Jump directly to matching FILE or display a list or candidates."
-  (let* ((options (projectile-django--get-matching-files file))
-         (len (length options)))
+(defun projectile-django--maybe-jump-to-list (candidates)
+  "Jump to a file in CANDIDATES.
+
+If CANDIDATES' length is 1, then jump without asking."
+  (let ((len (length candidates)))
     (cond
      ((< len 1) (projectile-django--fail "No suitable candidates."))
-     ((eq len 1) (find-file (expand-file-name (car options) (projectile-project-root))))
+     ((eq len 1) (find-file (expand-file-name (car candidates) (projectile-project-root))))
      (t (find-file (find-file (expand-file-name (projectile-completing-read "Jump to: "
-                                                                            options)
+                                                                            candidates)
                                                 (projectile-project-root))))))))
+
+(defun projectile-django--jump-to-file (file)
+  "Jump directly to matching FILE or display a list or candidates."
+  (let ((options (projectile-django--get-matching-files file)))
+    (projectile-django--maybe-jump-to-list options)))
 
 ;; Server specific defs
 (defvar projectile-django-server-mode-map
@@ -416,6 +422,51 @@ above actually defaults to the one in
       (message "No template found")))
   )
 
+;; Jumping to view
+(defun projectile-django--get-template-wanted-path ()
+  "Return the wanted file path to search in view files for the current template."
+  (let ((absolute-list (f-split (f-this-file)))
+        (unwanted "templates")
+        (wanted-path '())
+        unwanted-found)
+    (dolist (folder absolute-list)
+      (when unwanted-found
+        (setq wanted-path (append wanted-path (list folder))))
+      (when (and (not unwanted-found)
+                 (string= folder unwanted))
+        (setq unwanted-found t)))
+    (if wanted-path
+        (apply 'f-join wanted-path)
+      (projectile-django--fail "Current file is not a template."))))
+
+(defun projectile-django--get-view-search-command (path)
+  "Return the ag command to call when searching for PATH."
+  (concat "cd "
+          (projectile-project-root)
+          " && "
+          "ag "
+          path
+          " -l -G .py"))
+
+(defun projectile-django--get-views-for-template (path)
+  "Get views that call the template with relative path PATH."
+  (let* ((command (projectile-django--get-view-search-command path))
+         (result (shell-command-to-string command))
+         (final-result (replace-regexp-in-string "\n$"
+                                                 ""
+                                                 result)))
+    (s-split "\n" final-result)))
+
+(defun projectile-django-jump-to-view ()
+  "Jump to view that defines the current template."
+  (interactive)
+  (unless (executable-find "ag")
+    (error "Ag not found in path, maybe install the silver searcher?"))
+  (let* ((wanted-path (projectile-django--get-template-wanted-path))
+         (options (projectile-django--get-views-for-template wanted-path)))
+    (projectile-django--maybe-jump-to-list options)))
+
+
 
 ;; Keymap
 (define-prefix-command 'projectile-django-map)
@@ -426,6 +477,7 @@ above actually defaults to the one in
   (define-key map (kbd "t") 'projectile-django-test-all)
   (define-key map (kbd "v") 'projectile-django-visit-page)
   (define-key map (kbd "j t") 'projectile-django-jump-to-template)
+  (define-key map (kbd "j v") 'projectile-django-jump-to-view)
   map)
 
 ;; We expect our users to just bind the previous prefix to a key
