@@ -37,6 +37,7 @@ Any other symbol will default to 'bury.")
 (require 'comint)
 (require 'projectile)
 (require 'cl-lib)
+(require 'f)
 
 ;; General purpose defs
 (defvar projectile-django-output-mode-map
