@@ -54,8 +54,6 @@ the buffer. Any other value other than those two will default to
 A short description of the variables that `projectile-django` sets.
 
 
-<a id="org8c2a2e3"></a>
-
 ### `projectile-django-serve-for-everyone`
 
 When set to `t`, binds the server to the address `0.0.0.0` instead of
@@ -77,8 +75,6 @@ manage virtual environments.
 If you really want to use this variable, it's best to use
 project-local variables.
 
-
-
 ### `projectile-django-default-quit-action`
 
 Controls whether to bury or kill the current buffer when quitting. Set
@@ -86,15 +82,10 @@ to `'kill` for killing buffer or `'bury` to bury them. Any other value
 will default to `'bury`, which is also the preset value.
 
 
-
-
 ### `projectile-django-server-command`
 
 Default is `runserver`. Change it to run another command for the
 server. Maybe there's plugins or something. I don't really know.
-
-
-
 
 ## Extending
 
@@ -102,7 +93,6 @@ Pull requests are always welcome.
 
 The intended functionality for this project as of right now is also:
 
--   Support `loaddata` for fixtures
 -   Support `makemigrations` app-wise
 -   Support `migrate` app-wise
 -   Support jumping to template (possibly using `ag`)
