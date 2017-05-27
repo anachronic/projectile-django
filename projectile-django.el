@@ -357,8 +357,9 @@ above actually defaults to the one in
 ;; Jumping to template
 (defvar projectile-django-template-regexes
   (list
-   "^.*template_name[ ]*=[ ]*[\"\|\'].*[\"\|\']$" ;; For class-based views
-   "^.*return[ ]+render(request,[ ]*[\"\|\'].*[\"\|\']" ;; For render calls
+   "^.*template_name[\s-]*=[\s-]*[\"\|\'].*[\"\|\']$" ;; For class-based views
+   "^.*return[\s-]+render(request,[\s-\|
+]*[\"\|\'].*[\"\|\']" ;; For render calls
    )
   "A regular expression that defines the string to search for a template name.")
 
@@ -374,23 +375,24 @@ Calls to this function must call `widen' first."
 (defun projectile-django-jump-to-template ()
   "Jump to the template corresponding to the current file."
   (interactive)
-  (save-restriction
-    (widen)
-    (let ((found -1)
-          (candidates projectile-django-template-regexes)
-          candidate)
-      (while (and (or (not found)
-                      (eq -1 found))
-                  candidates)
-        (setq candidate (car candidates))
-        (setq found (projectile-django--get-template-point-for-regex candidate))
-        (setq candidates (cdr candidates)))
-      (if (and found (> found 0))
-          (progn
-            (goto-char found)
-            (projectile-find-file-dwim))
-        (ding)
-        (message "No template found"))))
+  (save-excursion
+    (save-restriction
+      (widen)
+      (let ((found -1)
+            (candidates projectile-django-template-regexes)
+            candidate)
+        (while (and (or (not found)
+                        (eq -1 found))
+                    candidates)
+          (setq candidate (car candidates))
+          (setq found (projectile-django--get-template-point-for-regex candidate))
+          (setq candidates (cdr candidates)))
+        (if (and found (> found 0))
+            (progn
+              (goto-char found)
+              (projectile-find-file-dwim))
+          (ding)
+          (message "No template found")))))
   )
 
 
