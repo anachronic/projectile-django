@@ -38,6 +38,7 @@ Any other symbol will default to 'bury.")
 (require 'projectile)
 (require 'cl-lib)
 (require 'f)
+(require 'dash)
 
 ;; General purpose defs
 (defvar projectile-django-output-mode-map
@@ -60,6 +61,11 @@ Quitting the buffer will trigger `projectile-django-quit-action'.
   (expand-file-name (concat (projectile-project-root)
                             "manage.py")))
 
+(defun projectile-django--fail (msg &rest args)
+  "Ring the bell and display MSG with ARGS with the `format' spec."
+  (ding)
+  (message msg args))
+
 (defun projectile-django-quit-action ()
   "Quit the current buffer.
 
@@ -68,6 +74,23 @@ The action taken is defined in `projectile-django-default-quit-action'."
   (if (eq 'quit projectile-django-default-quit-action)
       (kill-this-buffer)
     (bury-buffer)))
+
+(defun projectile-django--get-matching-files (path)
+  "Return matching files in project for PATH."
+  (-filter (lambda (project-file-path)
+             (s-contains? path project-file-path t))
+           (projectile-current-project-files)))
+
+(defun projectile-django--jump-to-file (file)
+  "Jump directly to matching FILE or display a list or candidates."
+  (let* ((options (projectile-django--get-matching-files file))
+         (len (length options)))
+    (cond
+     ((< len 1) (projectile-django--fail "No suitable candidates."))
+     ((eq len 1) (find-file (expand-file-name (car options) (projectile-project-root))))
+     (t (find-file (find-file (expand-file-name (projectile-completing-read "Jump to: "
+                                                                            options)
+                                                (projectile-project-root))))))))
 
 ;; Server specific defs
 (defvar projectile-django-server-mode-map
