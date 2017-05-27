@@ -354,6 +354,46 @@ above actually defaults to the one in
       (setq final-url (read-string "URL: " final-url)))
     (browse-url final-url)))
 
+;; Jumping to template
+(defvar projectile-django-template-regexes
+  (list
+   "^.*template_name[ ]*=[ ]*[\"\|\'].*[\"\|\']$" ;; For class-based views
+   "^.*return[ ]+render(request,[ ]*[\"\|\'].*[\"\|\']" ;; For render calls
+   )
+  "A regular expression that defines the string to search for a template name.")
+
+(defun projectile-django--get-template-point-for-regex (regex)
+  "Get the point value for a template searching for REGEX.
+
+Calls to this function must call `widen' first."
+  (ignore-errors
+    (goto-char (point-min))
+    (1- (re-search-forward regex))))
+
+
+(defun projectile-django-jump-to-template ()
+  "Jump to the template corresponding to the current file."
+  (interactive)
+  (save-restriction
+    (widen)
+    (let ((found -1)
+          (candidates projectile-django-template-regexes)
+          candidate)
+      (while (and (or (not found)
+                      (eq -1 found))
+                  candidates)
+        (setq candidate (car candidates))
+        (setq found (projectile-django--get-template-point-for-regex candidate))
+        (setq candidates (cdr candidates)))
+      (if (and found (> found 0))
+          (progn
+            (goto-char found)
+            (projectile-find-file-dwim))
+        (ding)
+        (message "No template found"))))
+  )
+
+
 ;; Keymap
 (define-prefix-command 'projectile-django-map)
 (let ((map projectile-django-map))
@@ -362,10 +402,12 @@ above actually defaults to the one in
   (define-key map (kbd "l") 'projectile-django-loaddata)
   (define-key map (kbd "t") 'projectile-django-test-all)
   (define-key map (kbd "v") 'projectile-django-visit-page)
+  (define-key map (kbd "j t") 'projectile-django-jump-to-template)
   map)
 
 ;; We expect our users to just bind the previous prefix to a key
 ;; globally. It's the best way
+
 
 
 (provide 'projectile-django)
