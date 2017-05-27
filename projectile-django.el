@@ -387,36 +387,33 @@ above actually defaults to the one in
    )
   "A regular expression that defines the string to search for a template name.")
 
-(defun projectile-django--get-template-point-for-regex (regex)
-  "Get the point value for a template searching for REGEX.
-
-Calls to this function must call `widen' first."
+(defun projectile-django--get-template-filename-for-regex (regex)
+  "Get the point value for a template searching for REGEX."
   (ignore-errors
-    (goto-char (point-min))
-    (1- (re-search-forward regex))))
+    (save-excursion
+      (save-restriction
+        (widen)
+        (goto-char (point-min))
+        (goto-char (1- (re-search-forward regex)))
+        (thing-at-point 'filename t)))))
 
 
 (defun projectile-django-jump-to-template ()
   "Jump to the template corresponding to the current file."
   (interactive)
-  (save-excursion
-    (save-restriction
-      (widen)
-      (let ((found -1)
-            (candidates projectile-django-template-regexes)
-            candidate)
-        (while (and (or (not found)
-                        (eq -1 found))
-                    candidates)
-          (setq candidate (car candidates))
-          (setq found (projectile-django--get-template-point-for-regex candidate))
-          (setq candidates (cdr candidates)))
-        (if (and found (> found 0))
-            (progn
-              (goto-char found)
-              (projectile-find-file-dwim))
-          (ding)
-          (message "No template found")))))
+  (let ((found "")
+        (candidates projectile-django-template-regexes)
+        candidate)
+    (while (and (or (not found)
+                    (string= "" found))
+                candidates)
+      (setq candidate (car candidates))
+      (setq found (projectile-django--get-template-filename-for-regex candidate))
+      (setq candidates (cdr candidates)))
+    (if found
+        (projectile-django--jump-to-file found)
+      (ding)
+      (message "No template found")))
   )
 
 
