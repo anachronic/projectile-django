@@ -14,27 +14,95 @@ server. Every function call to this project **must** be from a
 projectile-active buffer. This also means you can have multiple django
 projects running at once and `projectile-django` should support it.
 
+## Key bindings
+
+All keys described here run under the prefix for the keymap, which you
+should set yourself by having this in your config:
+
+``` emacs-lisp
+(global-set-key (kbd "M-m d") 'projectile-django-map)
+```
+
+Of course, `M-m d` are keys that i chose myself. You can set whatever
+prefix you want.
+
+`<prefix> + s`: Run the server<br>
+`<prefix> + m`: Migrate all applications<br>
+`<prefix> + l`: Load a fixture using `loaddata`<br>
+`<prefix> + t`: Run all tests<br>
+`<prefix> + v`: Visit project's web page<br>
+
+`<prefix> + j t`: Jump to template for current view<br>
+`<prefix> + j v`: Jump to view for current template
+
 
 ## Running the server
 
-Call it with `<projectile-prefix> s`. It will start the server in
-`comint-mode`.
+Call it with `<prefix> s` or `M-x projectile-django-server`.
 
-You can restart the server by calling
-`projectile-django-terminate-server` or by just hitting `C-c C-k` in
-the server buffer.
+The server opens in a separate buffer in
+`projectile-django-server-mode` which derives from `comint-mode`. Any
+subsequent calls to `projectile-django-server` will switch to the
+server buffer if it's already running.
 
-You can also restart the server by calling
+Inside the server buffer you can kill the server by calling
+`projectile-django-terminate-server` or by just hitting `C-c C-k`. You
+can also restart the server by calling
 `projectile-django-restart-server` or hitting `C-c C-r` in the server
-buffer.
+buffer. Lastly, you can bury the buffer by hitting `C-c C-q`.
 
-Lastly, you can bury the buffer by hitting `C-c C-q` on the server buffer
+
+The server buffer is known to work with `ipdb` as long as you set up
+your ansi filter. It is advised to
+have [xterm-color](https://github.com/atomontage/xterm-color)
+installed.
 
 
 ## Running migrations
 
-Call `projectile-django-migrate-all`. Every time you call this, the
-buffer will reset. Hitting `q` inside this buffer will quit the buffer.
+Call `M-x projectile-django-migrate-all` or `<prefix> m`. Every time
+you call this, the buffer will reset. Hitting `q` inside this buffer
+will quit the buffer.
+
+## Running tests
+
+Call `M-x projectile-django-test-all` or `<prefix> t`. It has the same
+behavior as migrations. Every time you call this, tests will
+reset. Quitting will trigger the quit action.
+
+## Loading fixtures
+
+Call `M-x projectile-django-loaddata` or `<prefix> l`. It will ask for
+what file you want to load. This searches every fixture directory and
+collects every fixture there. When fixtures get loaded, use `q` to
+quit the buffer.
+
+## Visiting the page
+
+Call `M-x projectile-django-visit-page` or `<prefix> v`. You will
+visit your page with the default browse. Projectile-django will use
+the `browse-url` function to open the page.
+
+## Jumping
+
+There are, for the moment, only two jumping options.
+
+* From view to template
+* From template to view
+
+### Jump to template from view
+
+`M-x projectile-django-jump-to-template` or `<prefix> j t`. This
+searches for any template string in the document and jumps directly to
+it. This **does not** infer templates based on inheritance or
+anything. It's pretty dumb.
+
+### Jump to view from template
+
+`M-x projectile-django-jump-to-view` or `<prefix> j v`. This command
+**requires** `ag` to run. It will search the project for the desired
+template filename and jump to it or prompt for file depending on the
+options gathered.
 
 
 ## Quitting
@@ -95,8 +163,6 @@ The intended functionality for this project as of right now is also:
 
 -   Support `makemigrations` app-wise
 -   Support `migrate` app-wise
--   Support jumping to template (possibly using `ag`)
--   Support jumping to view
 -   Jump to settings
 -   Jump to urls
 
