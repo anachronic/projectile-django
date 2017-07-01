@@ -140,6 +140,7 @@ Killing the buffer will terminate its server process.
     (set-buffer buffer)
     (erase-buffer)
     (switch-to-buffer (current-buffer))
+    (setq truncate-lines nil)
     (projectile-django-server-mode)))
 
 (defun projectile-django-server ()
@@ -181,7 +182,6 @@ Killing the buffer will terminate its server process.
     (save-current-buffer
       (set-buffer server-buffer)
       (projectile-django-server))))
-
 
 ;; Migration defs
 (defvar projectile-django-migration-mode-map
